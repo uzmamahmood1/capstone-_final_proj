@@ -1,0 +1,295 @@
+---
+title: "week3_assignment"
+author: "uzma"
+date: "30 November 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##NLP week3 assignment
+
+load libraries and data
+
+```{r library}
+library(NLP)
+library(tm)
+library(stringi)
+library(RWeka)
+library(ggplot2)
+library(wordcloud)
+library(RColorBrewer)
+library(stringr)
+library(dplyr)
+library(tm)
+library(stylo)
+options(mc.cores=1)
+```
+
+for loading data
+
+```{r debug}
+conectionTwiter <- file('en_US.twitter.txt')
+TwiterData <- readLines(conectionTwiter,encoding = 'UTF-8',skipNul = TRUE)
+close(conectionTwiter)
+conectionNews <- file('en_US.news.txt', open = 'r')
+newsData <- readLines(conectionNews)
+close(conectionNews)
+conectionBlog <- file('en_US.blogs.txt',open = 'r')
+BlogData <- readLines(conectionBlog)
+close(conectionBlog)
+
+library(tm)
+nLines <- 5000
+
+#Creating a character vector of lines from Twittwe, Blog and News Data
+
+Vector <- vector('character')
+twiterIndex <- sample(TwiterData,nLines,replace = FALSE)
+tiwiterVector <- c(Vector,twiterIndex)
+newsIndex <- sample(newsData,nLines,replace = FALSE)
+newsVector <- c(Vector,newsIndex)
+BlogIndex <- sample(BlogData,nLines,replace = FALSE)
+BlogVector <- c(Vector,BlogIndex)
+#Removing source data from environment
+rm(TwiterData)
+rm(newsData)
+rm(BlogData)
+
+#Creating a courpus from the character vector. 
+sData<- c(tiwiterVector,newsVector,BlogVector)
+corpus <- VCorpus(VectorSource(sData))
+
+#Cleaning Data
+
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, stripWhitespace)
+rm(sData)
+cleanData <- data.frame(rawtext = sapply(corpus, as.character), stringsAsFactors=FALSE)
+rm(corpus)
+head(cleanData)
+cleanData$textLines <- iconv(cleanData$rawtext, 'UTF-8', 'ASCII')
+cleanData$textLines <- tolower(cleanData$textLines)
+cleanData <- cleanData[!is.na(cleanData$textLines),]
+
+#Loading tockenizers package
+library(tokenizers)
+# Gram1
+tokens <- tokenize_ngrams(cleanData$textLines,n=1,n_min = 1)
+tokenTable <- table(unlist(tokens))
+head(tokenTable)
+ngramOne <- data.frame(tokenTable)
+ngramOne <- ngramOne[order(ngramOne$Freq,decreasing = TRUE),]
+head(ngramOne)
+
+#gram2
+tokens <- tokenize_ngrams(cleanData$textLines,n=2,n_min = 2)
+tokenTable <- table(unlist(tokens))
+head(tokenTable)
+ngramtwo <- data.frame(tokenTable)
+ngramtwo <- ngramtwo[order(ngramtwo$Freq,decreasing = TRUE),]
+head(ngramtwo)
+
+# gram3
+
+tokens <- tokenize_ngrams(cleanData$textLines,n=3,n_min = 3)
+tokenTable <- table(unlist(tokens))
+head(tokenTable)
+ngramthree <- data.frame(tokenTable)
+ngramthree <- ngramthree[order(ngramthree$Freq,decreasing = TRUE),]
+head(ngramthree)
+
+# gram 4
+
+tokens <- tokenize_ngrams(cleanData$textLines,n=4,n_min = 4)
+tokenTable <- table(unlist(tokens))
+head(tokenTable)
+ngramfour <- data.frame(tokenTable)
+ngramfour <- ngramfour[order(ngramfour$Freq,decreasing = TRUE),]
+head(ngramfour)
+
+# gram 5
+tokens <- tokenize_ngrams(cleanData$textLines,n=5,n_min = 5)
+tokenTable <- table(unlist(tokens))
+head(tokenTable)
+ngramfive <- data.frame(tokenTable)
+ngramfive <- ngramfive[order(ngramfive$Freq,decreasing = TRUE),]
+head(ngramfive)
+
+# saving the ngram data frames to .RDS files
+
+saveRDS(ngramOne,file = "output/Onegram.RDS")
+saveRDS(ngramtwo,file = "output/twogram.RDS")
+saveRDS(ngramthree,file = "output/threegram.RDS")
+saveRDS(ngramfour,file = "output/fourgram.RDS")
+saveRDS(ngramfive,file = "output/fivegram.RDS")
+
+#Consuming ngram databases 
+ngramOne <- readRDS("output/Onegram.RDS")
+ngramtwo <- readRDS("output/twogram.RDS")
+ngramthree <- readRDS("output/threegram.RDS")
+ngramfour <- readRDS("output/fourgram.RDS")
+ngramfive <- readRDS("output/fivegram.RDS")
+
+
+ngramOne$Var1 <- as.character(ngramOne$Var1)
+colnames(ngramOne)[which(colnames(ngramOne)=='Var1')]<-'word1'
+
+ngramtwo$Var1 <- as.character(ngramtwo$Var1)
+ngramtwo$word1 <-word(ngramtwo$Var1,1)
+ngramtwo$word0 <- word(ngramtwo$Var1,2)
+head(ngramtwo)
+
+ngramthree$Var1 <- as.character(ngramthree$Var1)
+ngramthree$word2 <-word(ngramthree$Var1,1)
+ngramthree$word1 <-word(ngramthree$Var1,2)
+ngramthree$word0 <-word(ngramthree$Var1,3)
+head(ngramthree)
+
+ngramfour$Var1 <- as.character(ngramfour$Var1)
+ngramfour$word3 <- word(ngramfour$Var1,1)
+ngramfour$word2 <- word(ngramfour$Var1,2)
+ngramfour$word1 <- word(ngramfour$Var1,3)
+ngramfour$word0 <- word(ngramfour$Var1,4)
+head(ngramfour)
+
+ngramfive$Var1 <- as.character(ngramfive$Var1)
+ngramfive$word4 <- word(ngramfive$Var1,1)
+ngramfive$word3 <- word(ngramfive$Var1,2)
+ngramfive$word2 <- word(ngramfive$Var1,3)
+ngramfive$word1 <- word(ngramfive$Var1,4)
+ngramfive$word0 <- word(ngramfive$Var1,5)
+head(ngramfive)
+
+cleanInput <- function(text){
+  textInput <- tolower(text)
+  textInput <- removePunctuation(textInput)
+  textInput <- removeNumbers(textInput)
+  textInput <- str_replace_all(textInput, "[^[:alnum:]]", " ")
+  textInput <- stripWhitespace(textInput)
+  textInput <- txt.to.words.ext(textInput, language="English.all", preserve.case = TRUE)
+  return(textInput)
+}
+
+#Match string in Four Gram and get probable word
+matchinFourGram <- function (inputWord1,inputWord2,inputWord3)
+  
+{
+  predictWord <- filter(ngramfour,(word1 == inputWord1 & word2 == inputWord2 & word3 == inputWord3))$word4
+  if(length(predictWord) == 0)
+  {
+    
+    predictWord <- filter(ngramfour,( word2 == inputWord2 & word3 == inputWord3))$word4
+    if(length(predictWord) == 0)
+    {
+      predictWord <- filter(ngramfour,( word1 == inputWord2 & word2 == inputWord3))$word3
+      
+      
+      if(length(predictWord) ==0)
+      {
+        predictWord <- matchThreeGram(inputWord2,inputWord3)
+      }
+      
+    }
+    
+  }
+  
+  predictWord
+  
+}
+
+#Match string in Three Gram and get probable word
+matchThreeGram <- function(inputWord1,inputWord2)
+{
+  predictWord <- filter(ngramthree,( word1 == inputWord1 & word2 == inputWord2))$word3
+  if(length(predictWord)==0)
+  {
+    predictWord <- filter(ngramthree,(word2 == inputWord2))$word3 
+    
+    if(length(predictWord)== 0)
+    {
+      predictWord <- filter(ngramthree,(word1 == inputWord2))$word2 
+      
+      if(length(predictWord) ==0 )
+      {
+        predictWord <- matchTwoGram(inputWord2)
+      }
+      
+    }
+  }
+  predictWord
+}
+
+#Match string in Two Gram and get probable word
+matchTwoGram <- function(inputWord1)
+{
+  predictWord <- filter(ngramtwo,( word1 == inputWord1 ))$word2
+  
+  predictWord
+  
+}
+
+#Predict next word Function takes in the input variable from user and predicts the next word
+predictNextWord <- function(input)
+{
+  
+  #Cleaning the input
+  wordInput <- cleanInput(input)
+  #Getting the number of words in the input
+  wordCount <- length(wordInput)
+  #Initializing response
+  prediction <- c()
+  
+  #Trimming input to the last three words
+  if(wordCount>3)
+  {
+    wordInput <- wordInput[(wordCount-2):wordCount]
+    prediction <- matchinFourGranm(wordInput[1],wordInput[2],wordInput[3])
+  }
+  
+  #Four Gram Match
+  if(wordCount ==3)
+  {
+    prediction <- matchinFourGranm(wordInput[1],wordInput[2],wordInput[3])
+  }
+  
+  #Three Gram Match
+  if(wordCount ==2)
+  {
+    prediction <- matchThreeGram(wordInput[1],wordInput[2])
+  }
+  #Two gram match
+  if(wordCount ==1)
+  {
+    prediction <- matchTwoGram(wordInput[1])
+  }
+  
+  #No word entered
+  if(wordCount == 0)
+  {
+    prediction <- "Why dont you Enter something???"
+  }
+  
+  #Unknown words
+  if(length(prediction)==0)
+  {
+    prediction <- "Oops!!! unfortunately  I was not able to make sense of what you told me"
+  }
+  
+  #Returning response
+  if(length(prediction) < 5)
+  {
+    prediction
+  }
+  else
+  {
+    prediction[1:5]
+  }
+  
+  
+}
+
+
