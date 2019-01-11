@@ -1,0 +1,155 @@
+---
+title: "week3assignment"
+author: "uzma"
+date: "3 December 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##NLP week3 assignment
+
+load libraries and data
+
+```{r library}
+library(NLP)
+library(tm)
+library(stringi)
+library(RWeka)
+library(ggplot2)
+library(wordcloud)
+library(RColorBrewer)
+library(stringr)
+library(dplyr)
+library(tm)
+library(stylo)
+options(mc.cores=1)
+```
+
+for loading data
+
+```{r debug}
+conectionTwiter <- file('en_US.twitter.txt')
+TwiterData <- readLines(conectionTwiter,encoding = 'UTF-8',skipNul = TRUE)
+close(conectionTwiter)
+conectionNews <- file('en_US.news.txt', open = 'r')
+newsData <- readLines(conectionNews)
+close(conectionNews)
+conectionBlog <- file('en_US.blogs.txt',open = 'r')
+BlogData <- readLines(conectionBlog)
+close(conectionBlog)
+
+library(tm)
+nLines <- 5000
+traindata <- nLines*2
+testdata <- nLines
+
+
+
+
+
+twiterIndex <- sample(TwiterData,nLines,replace = FALSE)
+
+newsIndex <- sample(newsData,nLines,replace = FALSE)
+
+BlogIndex <- sample(BlogData,nLines,replace = FALSE)
+
+#Removing source data from environment
+rm(TwiterData)
+rm(newsData)
+rm(BlogData)
+
+#Creating a courpus from the character vector. 
+sData<- c(twiterIndex,newsIndex,BlogIndex)
+train <- gsub("[^a-zA-Z0-9 ]","",sData)[1:traindata]
+test <- gsub("[^a-zA-Z0-9 ]","",sData)[traindata+1:testdata]
+
+
+corpus_maker <- function (x,y){
+      
+      temp <- Corpus(VectorSource((x)))
+      temp <- tm_map(temp, stripWhitespace)
+      temp <- tm_map(temp, content_transformer(tolower))
+      temp <- tm_map(temp, removePunctuation)
+      temp <- tm_map(temp, removeNumbers)
+      
+      temp <- tm_map(temp,removeWords, stopwords("english"))
+      
+     
+      data.frame(table(NGramTokenizer(temp,Weka_control(min=y, max=y))))
+}
+
+ngramOne <- corpus_maker(train,1)
+ngramOne$Var1 <- as.character(ngramOne$Var1)
+ngramOne$pred <- "n/a"
+ngramOne <- ngramOne[order(-ngramOne$Freq),]
+rownames(ngramOne) <- c(1:nrow(ngramOne))
+
+ngramtwo <- corpus_maker(train,2)
+ngramtwo$Var1 <- as.character(ngramtwo$Var1)
+ngramtwo <- ngramtwo[order(-ngramtwo$Freq),]
+rownames(ngramtwo) <- c(1:nrow(ngramtwo))
+ngramtwo$word1 <-word(ngramtwo$Var1,1)
+ngramtwo$word2 <- word(ngramtwo$Var1,2)
+
+ngramthree <- corpus_maker(train,3)
+ngramthree$Var1 <- as.character(ngramthree$Var1)
+ngramthree <- ngramthree[order(-ngramthree$Freq),]
+rownames(ngramthree) <- c(1:nrow(ngramthree))
+ngramthree$word1 <-word(ngramthree$Var1,1)
+ngramthree$word2 <- word(ngramthree$Var1,2)
+ngramthree$word3 <- word(ngramthree$Var1,3)
+
+ngramfour <- corpus_maker(train,4)
+ngramfour$Var1 <- as.character(ngramfour$Var1)
+ngramfour <- ngramfour[order(-ngramfour$Freq),]
+rownames(ngramfour) <- c(1:nrow(ngramfour))
+ngramfour$word1 <-word(ngramfour$Var1,1)
+ngramfour$word2 <- word(ngramfour$Var1,2)
+ngramfour$word3 <- word(ngramfour$Var1,3)
+ngramfour$word4 <- word(ngramfour$Var1,4)
+
+testgram_3 <- corpus_maker(test,3)
+testgram_3$Var1 <- as.character(testgram_3$Var1)
+testgram_3 <- testgram_3[order(-testgram_3$Freq),]
+rownames(testgram_3) <- c(1:nrow(testgram_3))
+testgram_3$word1 <- word(testgram_3$Var1,1)
+testgram_3$word2 <- word(testgram_3$Var1,2)
+testgram_3$word3 <- word(testgram_3$Var1,3)
+
+n<-1
+while(n<=nrow(testgram_3)){
+  testgram_3$pred1[n]<-ngramtwo$word2[ngramtwo$word1==testgram_3$word2[n]][1]
+  testgram_3$pred2[n]<-ngramthree$word3[ngramthree$word1==testgram_3$word1[n] & ngramthree$word2==testgram_3$word2[n]][1]
+  n<-n+1  
+}
+
+testgram_3$correct1 <- ifelse(testgram_3$word3==testgram_3$pred1,1,0)
+testgram_3$correct2 <- ifelse(testgram_3$word3==testgram_3$pred2,1,0)
+head(testgram_3)
+
+sum(testgram_3$correct1,na.rm = TRUE)/nrow(testgram_3)
+sum(testgram_3$correct2,na.rm = TRUE)/nrow(testgram_3)
+
+quiz2trigram <- corpus_maker("The guy in front of me just bought a pound of bacon, a bouquet, and a case of",3)
+
+quiz2trigram$Var1 <- as.character(quiz2trigram$Var1)quiz2trigram <- quiz2trigram[order(-quiz2trigram$Freq),]
+rownames(quiz2trigram) <- c(1:nrow(quiz2trigram))
+quiz2trigram$word1 <-word(quiz2trigram$Var1,1)
+quiz2trigram$word2 <- word(quiz2trigram$Var1,2)
+quiz2trigram$word3 <- word(quiz2trigram$Var1,3)
+
+head(quiz2trigram)
+
+n<-1
+while(n<=nrow(quiz2trigram)){
+  quiz2trigram$pred1[n]<-ngramtwo$word2[ngramtwo$word1==testgram_3$word2[n]][1]
+  quiz2trigram$pred2[n]<-ngramthree$word3[ngramthree$word1==testgram_3$word1[n] & ngramthree$word2==testgram_3$word2[n]][1]
+  n<-n+1  
+}
+
+quiz2trigram$correct1 <- ifelse(quiz2trigram$word3==quiz2trigram$pred1,1,0)
+quiz2trigram$correct2 <- ifelse(quiz2trigram$word3==quiz2trigram$pred2,1,0)
+head(quiz2trigram)
